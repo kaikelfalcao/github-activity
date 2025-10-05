@@ -34,5 +34,12 @@ func main() {
 		return
 	}
 
-	fmt.Printf("User found!")
+	response, err := ghs.GetActivities()
+
+	if err != nil { 
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(response)
 }

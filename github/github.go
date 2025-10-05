@@ -53,9 +53,7 @@ type EventResponse struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"repo"`
-	Payload struct {
-		Action string `json:"action"`
-	} `json:"payload"`
+	Payload json.RawMessage `json:"payload"`
 	Public    bool      `json:"public"`
 	CreatedAt time.Time `json:"created_at"`
 	Org       struct {
@@ -67,12 +65,8 @@ type EventResponse struct {
 	} `json:"org"`
 }
 
-type Events struct {
-	events []EventResponse
-}
-
 func (ghs *GitHubService) GetActivities() (string, error) {
-	var eventsUrl = fmt.Sprintf(API_URL + "%s/events", ghs.username)
+	var eventsUrl = fmt.Sprintf(API_URL + "users/%s/events", ghs.username)
 
 	response, err := ghs.client.Get(eventsUrl)
 
@@ -82,20 +76,54 @@ func (ghs *GitHubService) GetActivities() (string, error) {
 
 	defer response.Body.Close()
 
-	if response.StatusCode == http.StatusOK {
-		body, err := io.ReadAll(response.Body)
+	if response.StatusCode != http.StatusOK {
+        return "", fmt.Errorf("HTTP request failed with status %d", response.StatusCode)
+    }
 
-		if err != nil {
-			return "", err 
-		}
+	body, err := io.ReadAll(response.Body)
 
-		var events Events
-
-		json.Unmarshal(body, &events)
+	if err != nil {
+		return "", err 
 	}
 
-	return "", nil
+	var events []EventResponse
+	if err := json.Unmarshal(body, &events); err != nil {
+		return "", fmt.Errorf("error unmarshaling JSON: %w", err)
+	}
+
+	responseString, err := classifyEvents(ghs.username, events)
+
+	if err != nil {
+		return "", err 
+	}
+
+	return responseString, nil
 }
 
-func classifyEvents(events EventResponse) {
+func classifyEvents(username string, events []EventResponse) (string, error) {
+    response := fmt.Sprintf("The last %d activities from %s\n", len(events), username)
+
+    for _, event := range events {
+        var payload map[string]interface{}
+        if err := json.Unmarshal([]byte(event.Payload), &payload); err != nil {
+            return "", fmt.Errorf("error unmarshaling JSON: %w", err)
+        }
+
+        switch event.Type {
+        case "WatchEvent":
+            response += fmt.Sprintf("- Starred %s\n", event.Repo.Name)
+        case "PushEvent":
+            size := int(payload["size"].(float64))
+            response += fmt.Sprintf("- Pushed %d commits to %s\n", size, event.Repo.Name)
+        case "CreateEvent":
+            refType := payload["ref_type"].(string)
+            if refType == "repository" {
+                response += fmt.Sprintf("- Create %s\n", event.Repo.Name)
+            } else {
+                response += fmt.Sprintf("- Create %s on %s\n", refType, event.Repo.Name)
+            }
+        }
+    }
+
+    return response, nil
 }
