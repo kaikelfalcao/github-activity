@@ -119,7 +119,7 @@ func classifyEvents(username string, events []EventResponse) (string, error) {
         case "CreateEvent":
             refType := payload["ref_type"].(string)
             if refType == "repository" {
-                response += fmt.Sprintf("- Create %s\n", event.Repo.Name)
+                response += fmt.Sprintf("- Create repo %s\n", event.Repo.Name)
             } else {
                 response += fmt.Sprintf("- Create %s on %s\n", refType, event.Repo.Name)
             }
@@ -127,6 +127,8 @@ func classifyEvents(username string, events []EventResponse) (string, error) {
 			response += fmt.Sprintf("- %s a issue in %s\n", payload["action"], event.Repo.Name)
 		case "PullRequestEvent":
 			response += fmt.Sprintf("- %s a PR in %s\n", payload["action"], event.Repo.Name)
+		case "ForkEvent":
+			response += fmt.Sprintf("- Forked repo %s\n", event.Repo.Name)
         }
     }
 
