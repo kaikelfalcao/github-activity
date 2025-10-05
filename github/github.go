@@ -125,6 +125,8 @@ func classifyEvents(username string, events []EventResponse) (string, error) {
             }
 		case "IssuesEvent":
 			response += fmt.Sprintf("- %s a issue in %s\n", payload["action"], event.Repo.Name)
+		case "PullRequestEvent":
+			response += fmt.Sprintf("- %s a PR in %s\n", payload["action"], event.Repo.Name)
         }
     }
 
