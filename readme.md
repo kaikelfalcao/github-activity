@@ -18,12 +18,13 @@ Build the executable:
 go build -o github-activity
 ```
 
-Usage
+## Usage
 
 Run the program with a GitHub username as an argument:
 
+```go
 ./github-activity <username>
-
+```
 
 ## Example:
 ```go
