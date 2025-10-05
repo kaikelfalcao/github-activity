@@ -103,6 +103,8 @@ func (ghs *GitHubService) GetActivities() (string, error) {
 func classifyEvents(username string, events []EventResponse) (string, error) {
     response := fmt.Sprintf("The last %d activities from %s\n", len(events), username)
 
+	pushEvents := make(map[string]int)
+	
     for _, event := range events {
         var payload map[string]interface{}
         if err := json.Unmarshal([]byte(event.Payload), &payload); err != nil {
@@ -113,8 +115,7 @@ func classifyEvents(username string, events []EventResponse) (string, error) {
         case "WatchEvent":
             response += fmt.Sprintf("- Starred %s\n", event.Repo.Name)
         case "PushEvent":
-            size := int(payload["size"].(float64))
-            response += fmt.Sprintf("- Pushed %d commits to %s\n", size, event.Repo.Name)
+			pushEvents[event.Repo.Name] += int(payload["size"].(float64))
         case "CreateEvent":
             refType := payload["ref_type"].(string)
             if refType == "repository" {
@@ -122,8 +123,14 @@ func classifyEvents(username string, events []EventResponse) (string, error) {
             } else {
                 response += fmt.Sprintf("- Create %s on %s\n", refType, event.Repo.Name)
             }
+		case "IssuesEvent":
+			response += fmt.Sprintf("- %s a issue in %s\n", payload["action"], event.Repo.Name)
         }
     }
+
+	for repo, commits := range pushEvents {
+		response += fmt.Sprintf("- Pushed %d commits to %s\n", commits, repo)
+	}
 
     return response, nil
 }
